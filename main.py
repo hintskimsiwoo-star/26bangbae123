@@ -11,17 +11,16 @@ import google.generativeai as genai
 from werkzeug.security import generate_password_hash, check_password_hash 
 
 app = Flask(__name__)
-# 보안 비밀키 설정 (세션 및 소켓 암호화용)
 app.config['SECRET_KEY'] = 'siwoo_school_violence_prevention_secret'
 CORS(app, resources={r"/*": {"origins": "*"}})
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# API KEY 설정
-API_KEY = "AIzaSyDQ5GBePgKYHif81I4CuXACCD4YJhObBMY"
+# API KEY 설정 (환경 변수 우선 적용, 없을 경우 기본값 세팅)
+API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyDQ5GBePgKYHif81I4CuXACCD4YJhObBMY")
 genai.configure(api_key=API_KEY.strip())
 model = genai.GenerativeModel('gemini-3.1-flash-lite-preview')
 
-# HTML UI 정의 (Single File 형태 유지를 위해 내장 변수로 처리)
+# HTML UI 정의
 HTML_UI = """
 <!DOCTYPE html>
 <html lang="ko">
@@ -396,4 +395,30 @@ def report():
         response = model.generate_content(counsel_prompt)
         return jsonify({"status": "success", "counseling": response.text})
     except:
-    return jsonify({"status": "success", "msg": "회원가입 완료! 로그인 탭에서 입장하세요."})
+        return jsonify({"status": "success", "counseling": "신고가 엑셀에 저장되었어. 기분이 어떤지 나한테 편하게 털어놔도 돼."})
+
+@app.route('/api/counsel', methods=['POST'])
+def counsel():
+    user_msg = request.json.get('message', '')
+    prompt = f"너는 따뜻한 학교폭력 전문 AI 상담사야. 학생이 방금 '{user_msg}'라고 말했어. 짧고 다정하게 공감하며 대화를 이어가줘."
+    try:
+        response = model.generate_content(prompt)
+        return jsonify({"reply": response.text})
+    except:
+        return jsonify({"reply": "수호자가 듣고 있어. 천천히 계속 말해줘."})
+
+@app.route('/download')
+def download():
+    try:
+        return send_file('학교폭력_신고대장.csv', as_attachment=True)
+    except:
+        return "아직 신고 내역이 없거나 파일이 생성되지 않았습니다.", 404
+
+@socketio.on('chat')
+def handle_chat(data):
+    emit('broadcast_chat', data, broadcast=True)
+
+if __name__ == '__main__':
+    print(f"🚀 동GO동樂 100% 5초 팝업 완벽 가동 중!")
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    
