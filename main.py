@@ -396,4 +396,4 @@ def report():
         response = model.generate_content(counsel_prompt)
         return jsonify({"status": "success", "counseling": response.text})
     except:
-        return jsonify({"status": "success
+return jsonify({"status": "success", "msg": "회원가입 완료! 로그인 탭에서 입장하세요."})
